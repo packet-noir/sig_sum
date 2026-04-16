@@ -11,7 +11,7 @@ Accepts a path to a directory containing sigma rules and summarizes them.
 ## Usage
 
 ```
-python3 sig_sum.py /absolute/path/to/directory
+python sig_sum.py /absolute/path/to/directory
 ```
 
 ## Sample Output
