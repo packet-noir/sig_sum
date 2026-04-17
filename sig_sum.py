@@ -14,26 +14,26 @@ def accept_dir():
 def find_files(directory):
     p = Path(directory)
     files = p.rglob("*.yml")
-    list = []
+    file_list = []
     for item in files:
-        list.append(str(item))
-    return list
+        file_list.append(str(item))
+    return file_list
 
 def parse_yaml(file):
     with open(file, 'r') as f:
         data = yaml.full_load(f)
     return data
 
-def summarize(yaml, mitre_tags, technique):
-    rule_title = yaml.get('title')
-    alert_severity = yaml.get('level')
-    rule_source_category = yaml.get('logsource').get('category')
-    rule_source_product = yaml.get('logsource').get('product')
-    detection_logic = yaml.get('detection')
+def summarize(yaml_data, mitre_tags, technique):
+    rule_title = yaml_data.get('title')
+    alert_severity = yaml_data.get('level')
+    rule_source_category = yaml_data.get('logsource').get('category')
+    rule_source_product = yaml_data.get('logsource').get('product')
+    detection_logic = yaml_data.get('detection')
     return f"title: {rule_title}\nseverity: {alert_severity}\nsource: {rule_source_category} from {rule_source_product}\nMitre Tags: {mitre_tags} Mitre Technique Name(s): {technique}\nDetection: {detection_logic}\n"
     
-def collect_tags(yaml):
-    mitre_tags = yaml.get('tags')
+def collect_tags(yaml_data):
+    mitre_tags = yaml_data.get('tags')
     tags_len = len(mitre_tags)
     tags_list = []
     for i in range(tags_len):
@@ -43,9 +43,8 @@ def collect_tags(yaml):
 def map_mitre(mitre_list):
     tech_list = []
     for i in mitre_list:
-        m = i.removeprefix('attack.')
-        if re.search("t\\d+", m):
-            tech_list.append(m)
+        if re.search("t\\d+", i):
+            tech_list.append(i)
     return tech_list
 
 def get_mitre():
@@ -61,10 +60,9 @@ def tech_name():
     dic = {}
     for i in data:
         if i['type'] == "attack-pattern":
-            ext_ref = i.get('external_references')[0]
-            key = ext_ref.get('external_id')
-            value = i.get('name')
-            dic[key] = value
+            for ref in i.get('external_references', []):
+                if ref.get('source_name') == 'mitre-attack':
+                    dic[ref.get('external_id')] = i.get('name')
     return dic
 
 def main():
@@ -72,15 +70,15 @@ def main():
     files = find_files(directory)
     mitre_dic = tech_name()
     for i in files:
-        yaml = (parse_yaml(i))
-        mitre_tags = collect_tags(yaml)
+        yaml_data = (parse_yaml(i))
+        mitre_tags = collect_tags(yaml_data)
         tech_list = map_mitre(mitre_tags)
         technique = []
         for i in tech_list:
-            for key, value in mitre_dic.items():
-                if i.upper() == key:
-                    technique.append(value)
-        print(summarize(yaml, mitre_tags, technique))
+            tname = mitre_dic.get(i.upper())
+            if tname:
+                technique.append(tname)
+        print(summarize(yaml_data, mitre_tags, technique))
 main()
 
 
